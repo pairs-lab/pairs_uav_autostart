@@ -23,7 +23,6 @@ set(CATKIN_DEPENDENCIES
   nodelet
   std_msgs
   topic_tools
-  pairs_uav_testing
   )
 
 find_package(catkin REQUIRED COMPONENTS

@@ -1,5 +1,0 @@
-<library path="lib/libPairsUavAutostart_AutomaticStart">
-  <class name="pairs_uav_autostart/AutomaticStart" type="pairs_uav_autostart::automatic_start::AutomaticStart" base_class_type="nodelet::Nodelet">
-    <description>AutomaticStart nodelet</description>
-  </class>
-</library>

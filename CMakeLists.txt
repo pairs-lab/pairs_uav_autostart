@@ -1,98 +1,134 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.28)
 project(pairs_uav_autostart)
 
-set(CMAKE_CXX_STANDARD 17)
+# set the correct standards
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-add_definitions(-Wall)
-add_definitions(-Wextra)
+# 1 == use rclcpp::Timer implementation
+# 0 == use PAIRS's thread timer implementation
+set(USE_ROS_TIMER 0)
 
-if(COVERAGE)
-  message(WARNING "building with --coverage, the performance might be limited")
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
+if(${USE_ROS_TIMER})
+  MESSAGE(WARNING "[pairs_uav_autostart]: Compiling with ROS Timers. This can cause high CPU load in runtime.")
 endif()
 
-set(CATKIN_DEPENDENCIES
-  cmake_modules
-  roscpp
-  rospy
-  std_srvs
+# set the compile options to show code warnings
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options("-Wall" "-Wextra" "-Wpedantic")
+endif()
+
+if(ENABLE_COVERAGE)
+  message(WARNING "building for coverage, the performance might be limited")
+
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -fprofile-arcs")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage -fprofile-arcs")
+
+  add_definitions("-O1")
+  add_definitions("-g")
+endif()
+
+set(DEPENDENCIES
+  rclcpp
+  rclcpp_components
   pairs_msgs
   pairs_lib
-  nodelet
   std_msgs
-  topic_tools
+  std_srvs
   pairs_uav_testing
-  )
+  backward_ros
+)
 
-find_package(catkin REQUIRED COMPONENTS
-  ${CATKIN_DEPENDENCIES}
-  )
+foreach(DEP IN LISTS DEPENDENCIES)
+  find_package(${DEP} REQUIRED)
+endforeach()
 
 set(LIBRARIES
   PairsUavAutostart_AutomaticStart
-  )
+)
 
-catkin_package(
-  LIBRARIES ${LIBRARIES}
-  CATKIN_DEPENDS ${CATKIN_DEPENDENCIES}
-  )
+## --------------------------------------------------------------
+## |                           Compile                          |
+## --------------------------------------------------------------
 
-include_directories(
-  ${catkin_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS}
-  )
+# Automatic start
 
-add_library(PairsUavAutostart_AutomaticStart
+add_library(PairsUavAutostart_AutomaticStart SHARED
   src/automatic_start.cpp
-  )
-
-add_dependencies(PairsUavAutostart_AutomaticStart
-  ${${PROJECT_NAME}_EXPORTED_TARGETS}
-  ${catkin_EXPORTED_TARGETS}
-  )
+)
 
 target_link_libraries(PairsUavAutostart_AutomaticStart
-  ${catkin_LIBRARIES}
-  )
+  PUBLIC
+    rclcpp::rclcpp
+    rclcpp_components::component
+    pairs_lib::pairs_lib
+    ${pairs_msgs_TARGETS}
+    ${std_msgs_TARGETS}
+    ${std_srvs_TARGETS}
+)
+
+rclcpp_components_register_nodes(PairsUavAutostart_AutomaticStart
+  "pairs_uav_autostart::automatic_start::AutomaticStart"
+)
+
+target_compile_definitions(PairsUavAutostart_AutomaticStart PRIVATE USE_ROS_TIMER=${USE_ROS_TIMER})
 
 ## --------------------------------------------------------------
-## |                           Testing                          |
+## |                           testing                          |
 ## --------------------------------------------------------------
 
-if(CATKIN_ENABLE_TESTING AND PAIRS_ENABLE_TESTING)
-
-  message(WARNING "Testing enabled.")
+if(ENABLE_TESTS)
 
   add_subdirectory(test)
+
+  if(NOT DEFINED ENV{IN_NIX_SHELL})
+    find_package(ament_cmake_clang_format REQUIRED)
+    ament_clang_format(CONFIG_FILE "${PROJECT_SOURCE_DIR}/.clang-format")
+    find_package(ament_cmake_xmllint REQUIRED)
+    ament_xmllint()
+  endif()
 
 endif()
 
 ## --------------------------------------------------------------
-## |                           Install                          |
+## |                           install                          |
 ## --------------------------------------------------------------
 
-install(TARGETS ${LIBRARIES}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_GLOBAL_BIN_DESTINATION}
+ament_export_libraries(
+  ${LIBRARIES}
   )
 
-install(DIRECTORY launch config
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-  )
+install(
+  TARGETS ${LIBRARIES}
+  EXPORT export_${PROJECT_NAME}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
 
-install(DIRECTORY scripts/
+install(
+  DIRECTORY launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(
+  DIRECTORY config
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(
+  DIRECTORY scripts
   USE_SOURCE_PERMISSIONS
-  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-  )
+  DESTINATION lib/${PROJECT_NAME}
+)
 
-install(DIRECTORY scripts
-  USE_SOURCE_PERMISSIONS
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-  )
+ament_export_targets(
+  export_${PROJECT_NAME} HAS_LIBRARY_TARGET
+)
 
-install(FILES nodelets.xml
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-  )
+ament_export_dependencies(
+  ${DEPENDENCIES}
+)
+
+ament_package()

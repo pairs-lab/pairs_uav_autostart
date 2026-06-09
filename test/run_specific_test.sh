@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-MY_PATH=`pwd`
-
 while [ ! -e "build/COLCON_IGNORE" ]; do
   cd ..
   if [[ `pwd` == "/" ]]; then
@@ -15,6 +13,6 @@ export RMW_IMPLEMENTATION=rmw_fastrtps_cpp
 
 colcon test-result --delete-yes
 
-colcon test --paths $MY_PATH/.. -p 1 --event-handlers console_direct+
+colcon test --packages-select pairs_uav_autostart --ctest-args -R 'externally' --event-handlers console_direct+ console_stderr- console_start_end-
 
 colcon test-result --all --verbose

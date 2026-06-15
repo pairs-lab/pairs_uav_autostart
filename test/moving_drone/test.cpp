@@ -51,7 +51,7 @@ bool Tester::test() {
 
   {
     while (ros::ok()) {
-      if (uh->mrsSystemReady()) {
+      if (uh->pairsSystemReady()) {
         break;
       }
     }

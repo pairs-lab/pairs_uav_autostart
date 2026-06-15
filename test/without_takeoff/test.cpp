@@ -43,7 +43,7 @@ bool Tester::test() {
 
     ROS_INFO_THROTTLE(1.0, "[%s]: waiting for the PAIRS UAV System", name_.c_str());
 
-    if (uh->mrsSystemReady()) {
+    if (uh->pairsSystemReady()) {
       ROS_INFO("[%s]: PAIRS UAV System is ready", name_.c_str());
       break;
     }

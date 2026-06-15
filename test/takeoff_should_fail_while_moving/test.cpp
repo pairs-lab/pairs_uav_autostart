@@ -72,7 +72,7 @@ bool Tester::test(void) {
 
   {
     while (rclcpp::ok()) {
-      if (uh_->mrsSystemReady()) {
+      if (uh_->pairsSystemReady()) {
         break;
       }
     }
